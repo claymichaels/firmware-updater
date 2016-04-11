@@ -1,4 +1,6 @@
 #!/bin/bash
+# v1.5.1 - Clay Michaels 23 Feb 2016
+#   Update file paths after moving folder out of /dev
 # v1.5 - clay michaels 9 Nov 2015
 #   Scan for newest PROJECT.conf files in confs folder
 #   Added retry loop for invalid input
@@ -75,11 +77,11 @@ confirm_continue
 ccu=$1
 
 echo "Sending FW:/var"
-rsync /home/automation/scripts/clayScripts/dev/deployment_files/firmware/4.19.3-1_boot.tar.gz "$ccu":/var > /dev/null 2>&1
+rsync /home/automation/scripts/clayScripts/deployment_files/firmware/4.19.3-1_boot.tar.gz "$ccu":/var > /dev/null 2>&1
 confirm_or_exit $?
 
 echo "Sending Scout binary:/var"
-rsync /home/automation/scripts/clayScripts/dev/deployment_files/patches/scout $ccu:/conf/extra/usr/local/bin/scout > /dev/null 2>&1
+rsync /home/automation/scripts/clayScripts/deployment_files/patches/scout $ccu:/conf/extra/usr/local/bin/scout > /dev/null 2>&1
 confirm_or_exit $?
 
 echo "UnTARing firmware"
@@ -91,7 +93,7 @@ ssh $ccu "rm /conf/boot/*.tar.gz;rm /conf/boot/r32*;rm /conf/boot/modules.log;" 
 confirm_or_exit $?
 
 echo "Sending SP2:/conf/boot"
-rsync /home/automation/scripts/clayScripts/dev/deployment_files/patches/V4.19.3-1SP2.tar.gz "$ccu":/conf/boot > /dev/null 2>&1
+rsync /home/automation/scripts/clayScripts/deployment_files/patches/V4.19.3-1SP2.tar.gz "$ccu":/conf/boot > /dev/null 2>&1
 confirm_or_exit $?
 
 echo "Copying new FW to /conf/boot"
@@ -119,7 +121,7 @@ fi
 
 # Scan for PROJECT.conf version
 fleet=${ccu%.*}
-confs=(`ls /home/automation/scripts/clayScripts/dev/deployment_files/confs/ | grep $fleet | sort -r`)
+confs=(`ls /home/automation/scripts/clayScripts/deployment_files/confs/ | grep $fleet | sort -r`)
 
 if [[ -z $confs ]] # empty var (no output from the ls|grep above)
 then
@@ -129,7 +131,7 @@ else
     if [ $confirm = "y" ]
     then
         echo "Sending PROJECT.conf $confs"
-        rsync /home/automation/scripts/clayScripts/dev/deployment_files/confs/$confs  $ccu:/conf/PROJECT.conf > /dev/null 2>&1
+        rsync /home/automation/scripts/clayScripts/deployment_files/confs/$confs  $ccu:/conf/PROJECT.conf > /dev/null 2>&1
         confirm_or_exit $?
         ssh $ccu "md5sum /conf/PROJECT.conf"
     elif [ $confirm = "n" ]
