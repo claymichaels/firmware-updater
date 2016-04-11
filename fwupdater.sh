@@ -1,4 +1,7 @@
 #!/bin/bash
+# v1.3 - clay michaels 28 Oct 2015
+#   Added ipset output before reboot prompt
+#   Changed midwest P.c filename
 # v1.2 - clay michaels 28 Oct 2015
 #   added case for PROJECT.conf versions
 
@@ -34,10 +37,6 @@ echo "Sending FW:/var"
 output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/4.19.3-1_boot.tar.gz "$1":/var`
 confirm_or_exit $output
 
-echo "Sending SP2:/conf/boot"
-output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/V4.19.3-1SP2.tar.gz "$1":/conf/boot`
-confirm_or_exit $output
-
 echo "Sending Scout binary:/var"
 output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/conf-extra-usr-local-bin/scout $1:/conf/extra/usr/local/bin`
 confirm_or_exit $output
@@ -48,6 +47,10 @@ confirm_or_exit $output
 
 echo "Removing old FW from /conf/boot"
 output=`ssh $1 "rm /conf/boot/*.tar.gz;rm /conf/boot/r32*;rm /conf/boot/modules.log;"`
+confirm_or_exit $output
+
+echo "Sending SP2:/conf/boot"
+output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/V4.19.3-1SP2.tar.gz "$1":/conf/boot`
 confirm_or_exit $output
 
 echo "Copying new FW to /conf/boot"
@@ -78,7 +81,7 @@ case $1 in
         conf=amfleet3.0.6
         ;;
     midwest.*)
-        conf=midwest2.4.6.conf
+        conf=midwest2.4.6
         ;;
     acela.*)
         conf=acela4.0.1
@@ -98,7 +101,7 @@ if [ $conf = "none" ]
 then
     echo "No PROJECT.conf available."
 else
-    read -e -p "Load PROJECT.conf \"$conf\"? (y/n)" confirm
+    read -e -p "Load PROJECT.conf \"$conf\"? (y/n)" -i "y" confirm
     if [ $confirm = "y" ]
     then
         echo "Sending PROJECT.conf"
@@ -117,11 +120,17 @@ confirm_or_exit $output
 echo "!!!!!!!!!!!!!!!!"
 echo "Ready to reboot?"
 echo "!!!!!!!!!!!!!!!!"
+users=`ssh $1 "ipset -L | grep , -c"`
+echo "$users users connected."
 read -e -p "REBOOT CCU? (y/n)" confirm
 if [ $confirm = "n" ]
 then
+    echo "----------"
+    echo "Finished $1"
     exit
 elif [ $confirm = "y" ]
 then
     echo `ssh $1 "reboot;exit;"`
+    echo "----------"
+    echo "Finished $1"
 fi
