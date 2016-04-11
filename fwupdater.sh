@@ -1,9 +1,28 @@
 #!/bin/bash
+# v1.4 - clay michaels 6 Nov 2015
+#   Trying to add exit code checking to break
 # v1.3 - clay michaels 28 Oct 2015
 #   Added ipset output before reboot prompt
 #   Changed midwest P.c filename
 # v1.2 - clay michaels 28 Oct 2015
 #   added case for PROJECT.conf versions
+
+colorize() {
+    case $1 in
+        green)
+            echo -e "\e[92m$2\e[0m"
+            ;;
+        red)
+            echo -e "\e[91m$2\e[0m"
+            ;;
+        blue)
+            echo -e "\e[34m$2\e[0m"
+            ;;
+        yellow)
+            echo -e "\e[93m$2\e[0m"
+            ;;
+    esac
+}
 
 confirm_continue() {
     read -e -p "Is this correct? (y/n)" -i "y" confirm
@@ -14,13 +33,12 @@ confirm_continue() {
 }
 
 confirm_or_exit() {
-    if [ -z "$1" ]
+    if [ $1 -eq 0 ] # completed successfully
     then
-        echo "Done."
+        colorize green "Done."
     else
-        echo "Uh-Oh! Response:"
-        echo "$1"
-        read -e -p "Continue? (y/n)" -i "y" confirm
+        colorize red "PROBLEM!"
+        read -e -p "Continue? (y/n)" -i "n" confirm
         if [ $confirm = "n" ]
         then
             exit 1
@@ -34,38 +52,38 @@ echo "Expected format is \"amfleet.9649\""
 confirm_continue
 
 echo "Sending FW:/var"
-output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/4.19.3-1_boot.tar.gz "$1":/var`
-confirm_or_exit $output
+rsync /home/automation/scripts/clayScripts/dev/deployment_files/4.19.3-1_boot.tar.gz "$1":/var > /dev/null 2>&1
+confirm_or_exit $?
 
 echo "Sending Scout binary:/var"
-output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/conf-extra-usr-local-bin/scout $1:/conf/extra/usr/local/bin`
-confirm_or_exit $output
+rsync /home/automation/scripts/clayScripts/dev/deployment_files/conf-extra-usr-local-bin/scout $1:/conf/extra/usr/local/bin > /dev/null 2>&1
+confirm_or_exit $?
 
 echo "UnTARing firmware"
-output=`ssh $1 "tar -zxf /var/4.19.3-1_boot.tar.gz -C /var"`
-confirm_or_exit $output
+ssh $1 "tar -zxf /var/4.19.3-1_boot.tar.gz -C /var" > /dev/null 2>&1
+confirm_or_exit $?
 
 echo "Removing old FW from /conf/boot"
-output=`ssh $1 "rm /conf/boot/*.tar.gz;rm /conf/boot/r32*;rm /conf/boot/modules.log;"`
-confirm_or_exit $output
+ssh $1 "rm /conf/boot/*.tar.gz;rm /conf/boot/r32*;rm /conf/boot/modules.log;" > /dev/null 2>&1
+confirm_or_exit $?
 
 echo "Sending SP2:/conf/boot"
-output=`rsync /home/automation/scripts/clayScripts/dev/deployment_files/V4.19.3-1SP2.tar.gz "$1":/conf/boot`
-confirm_or_exit $output
+rsync /home/automation/scripts/clayScripts/dev/deployment_files/V4.19.3-1SP2.tar.gz "$1":/conf/boot > /dev/null 2>&1
+confirm_or_exit $?
 
 echo "Copying new FW to /conf/boot"
-output=`ssh $1 "cp -p /var/4.19.3-1/*.tar.gz /conf/boot;cp -p /var/4.19.3-1/r32* /conf/boot;cp -p /var/4.19.3-1/modules.log /conf/boot;"`
-confirm_or_exit $output
+ssh $1 "cp -p /var/4.19.3-1/*.tar.gz /conf/boot;cp -p /var/4.19.3-1/r32* /conf/boot;cp -p /var/4.19.3-1/modules.log /conf/boot;" > /dev/null 2>&1
+confirm_or_exit $?
 
 
-echo "Unlinking old FW in /conf/boot"
-output=`ssh $1 "unlink /conf/boot/vmlinuz.nomad"`
-confirm_or_exit $output
+echo "Unlinking old FW in /conf/boot" > /dev/null 2>&1
+ssh $1 "unlink /conf/boot/vmlinuz.nomad"
+confirm_or_exit $?
 
 
-echo "Linking new FW in /conf/boot"
-output=`ssh $1 "cd /conf/boot;ln -s ./r3200ccu4_universal_4.19.3-1 vmlinuz.nomad"`
-confirm_or_exit $output
+echo "Linking new FW in /conf/boot" > /dev/null 2>&1
+ssh $1 "cd /conf/boot;ln -s ./r3200ccu4_universal_4.19.3-1 vmlinuz.nomad"
+confirm_or_exit $?
 
 
 read -e -p "Output ls of /conf/boot? (y/n)" -i "n" confirm
@@ -92,6 +110,12 @@ case $1 in
     socal.*)
         conf=socal2.0.4
         ;;
+    washdot.*)
+        conf=cascadesWA2.0.9
+        ;;
+    odot.*)
+        conf=cascadesOR2.0.1
+        ;;
     *)
         conf=none
         ;;
@@ -105,16 +129,16 @@ else
     if [ $confirm = "y" ]
     then
         echo "Sending PROJECT.conf"
-        output=`rsync $conf  $1:/conf/PROJECT.conf`
-        confirm_or_exit $output
+        rsync $conf  $1:/conf/PROJECT.conf > /dev/null 2>&1
+        confirm_or_exit $?
         ssh $1 "md5sum /conf/PROJECT.conf"
     fi
 fi
 
 
 echo "Syncing twice."
-output=`ssh $1 "sync;sync;"`
-confirm_or_exit $output
+ssh $1 "sync;sync;" > /dev/null 2>&1
+confirm_or_exit $?
 
 
 echo "!!!!!!!!!!!!!!!!"
